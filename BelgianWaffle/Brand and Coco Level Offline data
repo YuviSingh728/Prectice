@@ -1,0 +1,74 @@
+
+######################Brand Level Offline Data
+
+SELECT 
+COUNT(DISTINCT uniquebillno) AS Bill,COUNT(DISTINCT txnmappedmobile) Customer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END)AS Repeat_cust,
+SUM(itemnetamount) AS Sales,SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)AS Repeat_Sale,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END)AS Repeat_bill,
+COUNT(DISTINCT modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_Visit,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS AOV
+FROM sku_report_loyalty
+WHERE modifiedtxndate BETWEEN '2025-04-01' AND '2025-09-30'
+AND deliverymode='offline'
+
+
+SELECT 
+CASE 
+	WHEN modifiedtxndate BETWEEN '2025-08-01' AND '2025-08-31' THEN 'Aug-25'
+	WHEN modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+	END AS 'Peroid',
+COUNT(DISTINCT uniquebillno) AS Bill,COUNT(DISTINCT txnmappedmobile) Customer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END)AS Repeater_cust,
+SUM(itemnetamount) AS Sales,SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)AS Repeat_Sale,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END)AS Repeater_bill,
+COUNT(DISTINCT modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_Visit,
+SUM(itemnetamount)/COUNT(DISTINCT txnmappedmobile) AS AOV
+FROM sku_report_loyalty
+WHERE ((modifiedtxndate BETWEEN '2025-08-01' AND '2025-08-31')OR
+(modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30'))
+AND deliverymode='offline'
+GROUP BY 1;
+
+
+##########################COCO level Offline Data
+
+
+SELECT 
+COUNT(DISTINCT uniquebillno) AS Bill,COUNT(DISTINCT txnmappedmobile) Customer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END)AS Repeater_cust,
+SUM(itemnetamount) AS Sales,SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)AS Repeat_Sale,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END)AS Repeater_bill,
+COUNT(DISTINCT modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_Visit,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS AOV
+FROM sku_report_loyalty
+WHERE modifiedtxndate BETWEEN '2025-04-01' AND '2025-09-30'
+AND deliverymode='offline' AND modifiedstorecode LIKE 'C%';
+
+
+
+SELECT 
+CASE 
+	WHEN modifiedtxndate BETWEEN '2025-08-01' AND '2025-08-31' THEN 'Aug-25'
+	WHEN modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+	END AS 'Peroid',
+COUNT(DISTINCT uniquebillno) AS Bill,COUNT(DISTINCT txnmappedmobile) Customer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END)AS Repeater_cust,
+SUM(itemnetamount) AS Sales,SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)AS Repeat_Sale,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END)AS Repeater_bill,
+COUNT(DISTINCT modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_Visit,
+SUM(itemnetamount)/COUNT(DISTINCT txnmappedmobile) AS AOV
+FROM sku_report_loyalty
+WHERE ((modifiedtxndate BETWEEN '2025-08-01' AND '2025-08-31')OR
+(modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30'))
+AND deliverymode='offline'
+AND modifiedstorecode LIKE 'C%'
+GROUP BY 1;
+ 
+
+
+
+
+
+
+
