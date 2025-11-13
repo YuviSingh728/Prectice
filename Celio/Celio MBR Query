@@ -1,0 +1,430 @@
+
+#############################Overall Data
+
+SELECT
+COUNT(DISTINCT modifiedstorecode) AS Txn_Store,COUNT(DISTINCT txnmappedmobile) AS txncustomer,
+SUM(itemnetamount) AS Loyalty_Sales,
+COUNT(DISTINCT uniquebillno) AS Loyalty_BIlls,
+COUNT(DISTINCT CASE WHEN frequencycount=1 THEN txnmappedmobile END) AS One_Timer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeater,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END) AS Repeater_Sales,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END) AS Repeater_Bills,
+SUM(itemnetamount)/COUNT(DISTINCT txnmappedmobile) AS AMV,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS AOV,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)/
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END) AS Repeater_AOV,
+COUNT(DISTINCT txnmappedmobile, modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_visit
+FROM sku_report_loyalty
+WHERE modifiedtxndate<='2025-10-31';
+
+
+##One Timer
+SELECT 
+COUNT(DISTINCT CASE WHEN maxf=1 THEN txnmappedmobile END)onetimer,
+SUM(CASE WHEN maxf=1 THEN Sales END)/COUNT(DISTINCT CASE WHEN maxf=1 THEN bill END) AS OneTimer_AOV
+FROM (
+SELECT txnmappedmobile,SUM(itemnetamount)Sales,COUNT(DISTINCT uniquebillno)bill,
+MAX(frequencycount)maxf,MIN(frequencycount)minf FROM sku_report_loyalty 
+WHERE modifiedtxndate <='2025-10-31'
+GROUP BY 1)a;
+
+##Enrolled Customer
+SELECT
+COUNT(DISTINCT mobile) AS enrolled_Cust
+FROM member_report
+WHERE modifiedenrolledon<='2025-10-31';
+ 
+
+##Non Loyalty
+SELECT
+SUM(itemnetamount) AS Nonloyalty_sale,
+COUNT(DISTINCT uniquebillno) AS nonloyalty_Bills
+FROM sku_report_nonloyalty
+WHERE modifiedtxndate <='2025-10-31';
+
+##Points Value
+SELECT 
+SUM(pointscollected) AS Point_issued,
+SUM(CASE WHEN pointsspent>0 THEN pointsspent END) AS Point_redeemed,
+COUNT(DISTINCT CASE WHEN pointsspent>0 THEN mobile END) AS Redeemers,
+SUM(CASE WHEN pointsspent>0 THEN amount END) AS Redeemers_Sales,
+SUM(CASE WHEN pointsspent>0 THEN amount END)/COUNT(DISTINCT CASE WHEN pointsspent>0 THEN uniquebillno END) AS Redeemers_ATV
+FROM txn_report_accrual_redemption
+WHERE txndate<='2025-10-31';
+
+###################FY Level Data
+
+##Enrolled Customer
+SELECT
+	CASE 
+		WHEN modifiedenrolledon BETWEEN '2023-04-01' AND '2024-03-31' THEN 'FY 23-24'
+		WHEN modifiedenrolledon BETWEEN '2024-04-01' AND '2025-03-31' THEN 'FY 24-25'
+		WHEN modifiedenrolledon BETWEEN '2025-04-01' AND '2025-10-31' THEN 'FY 25-26'
+		END AS `Period`,
+COUNT(DISTINCT mobile) AS enrolled_Cust
+FROM member_report
+WHERE ((modifiedenrolledon BETWEEN '2023-04-01' AND '2024-03-31')OR
+(modifiedenrolledon BETWEEN '2024-04-01' AND '2025-03-31')OR
+(modifiedenrolledon BETWEEN '2025-04-01' AND '2025-10-31'))
+AND enrolledstorecode NOT LIKE '%Demo%'
+GROUP BY 1;
+
+
+##SKU Data
+
+
+SELECT
+	CASE 
+		WHEN modifiedtxndate BETWEEN '2023-04-01' AND '2024-03-31' THEN 'FY 23-24'
+		WHEN modifiedtxndate BETWEEN '2024-04-01' AND '2025-03-31' THEN 'FY 24-25'
+		WHEN modifiedtxndate BETWEEN '2025-04-01' AND '2025-10-31' THEN 'FY 25-26'
+		END AS `Period`,
+COUNT(DISTINCT txnmappedmobile) AS txncustomer,
+SUM(itemnetamount) AS Loyalty_Sales,
+COUNT(DISTINCT uniquebillno) AS Loyalty_BIlls,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeater,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END) AS Repeater_Sales
+FROM sku_report_loyalty
+WHERE ((modifiedtxndate BETWEEN '2023-04-01' AND '2024-03-31')OR
+(modifiedtxndate BETWEEN '2024-04-01' AND '2025-03-31')OR
+(modifiedtxndate BETWEEN '2025-04-01' AND '2025-10-31'))
+GROUP BY 1;
+
+##Points Redeemed
+
+SELECT
+	CASE 
+		WHEN txndate BETWEEN '2023-04-01' AND '2024-03-31' THEN 'FY 23-24'
+		WHEN txndate BETWEEN '2024-04-01' AND '2025-03-31' THEN 'FY 24-25'
+		WHEN txndate BETWEEN '2025-04-01' AND '2025-10-31' THEN 'FY 25-26'
+		END AS `Period`,
+		SUM(CASE WHEN pointsspent>0 THEN pointsspent END) AS Point_redeemed
+FROM txn_report_accrual_redemption
+WHERE ((txndate BETWEEN '2023-04-01' AND '2024-03-31')OR
+(txndate BETWEEN '2024-04-01' AND '2025-03-31')OR
+(txndate BETWEEN '2025-04-01' AND '2025-10-31'))
+AND storecode NOT LIKE '%demo%'AND modifiedbillno NOT LIKE '%test%'AND modifiedbillno NOT LIKE '%roll%'
+GROUP BY 1;
+
+
+
+###################FY Level Data
+
+##Enrolled Customer
+SELECT
+CONCAT(LEFT(MONTHNAME(modifiedenrolledon), 3), '-', RIGHT(YEAR(modifiedenrolledon), 2)) AS Month_Year,
+COUNT(DISTINCT mobile) AS enrolled_Cust
+FROM member_report
+WHERE modifiedenrolledon BETWEEN '2023-04-01' AND '2025-10-31'
+AND enrolledstorecode NOT LIKE '%Demo%'
+GROUP BY 1;
+
+
+##SKU Data
+
+SELECT
+CONCAT(LEFT(MONTHNAME(modifiedtxndate),3),'-',RIGHT(YEAR(modifiedtxndate), 2)) AS Month_Year,
+COUNT(DISTINCT txnmappedmobile) AS txncustomer,
+SUM(itemnetamount) AS Loyalty_Sales,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeater,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END) AS Repeater_Sales
+FROM sku_report_loyalty
+WHERE modifiedtxndate BETWEEN '2023-04-01' AND '2025-10-31'
+GROUP BY 1;
+
+##Points Redeemed
+
+SELECT
+CONCAT(LEFT(MONTHNAME(txndate), 3), '-', RIGHT(YEAR(txndate), 2)) AS Month_Year,
+SUM(CASE WHEN pointsspent>0 THEN pointsspent END) AS Point_redeemed
+FROM txn_report_accrual_redemption
+WHERE txndate BETWEEN '2023-04-01' AND '2025-10-31'
+AND storecode NOT LIKE '%demo%'AND modifiedbillno NOT LIKE '%test%'AND modifiedbillno NOT LIKE '%roll%'
+GROUP BY 1;
+
+
+#####################Oct and Sep month data 
+
+SELECT
+	CASE 
+		WHEN modifiedtxndate BETWEEN '2024-10-01' AND '2024-10-31' THEN 'Oct-24'
+		WHEN modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+		WHEN modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31' THEN 'Oct-25'
+		END AS `Period`,
+COUNT(DISTINCT modifiedstorecode) AS Txn_Store,COUNT(DISTINCT txnmappedmobile) AS txncustomer,
+SUM(itemnetamount) AS Loyalty_Sales,
+COUNT(DISTINCT uniquebillno) AS Loyalty_BIlls,
+COUNT(DISTINCT CASE WHEN frequencycount=1 THEN txnmappedmobile END) AS One_Timer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeater,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END) AS Repeater_Sales,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END) AS Repeater_Bills,
+SUM(itemnetamount)/COUNT(DISTINCT txnmappedmobile) AS AMV,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS AOV,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)/
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END) AS Repeater_AOV,
+COUNT(DISTINCT txnmappedmobile, modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_visit
+FROM sku_report_loyalty
+WHERE ((modifiedtxndate BETWEEN '2024-10-01' AND '2024-10-31')OR
+(modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30')OR
+(modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31'))
+GROUP BY 1;
+
+## New enrolled & Txn
+SELECT COUNT(DISTINCT txnmappedmobile) AS NewEnroll_Txn FROM sku_report_loyalty
+WHERE modifiedtxndate<='2025-09-30'
+AND txnmappedmobile IN (SELECT mobile FROM member_report
+WHERE modifiedenrolledon<='2025-09-30');
+
+
+##One Timer
+SELECT PERIOD, 
+COUNT(DISTINCT CASE WHEN maxf=1 THEN txnmappedmobile END)onetimer,
+SUM(CASE WHEN maxf=1 THEN itemnetamount END)/COUNT(DISTINCT CASE WHEN maxf=1 THEN uniquebillno END) AS OneTimer_AOV
+FROM (
+SELECT 
+	CASE 
+		WHEN modifiedtxndate BETWEEN '2024-10-01' AND '2024-10-31' THEN 'Oct-24'
+		WHEN modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+		WHEN modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31' THEN 'Oct-25'
+		END AS `Period`,
+		txnmappedmobile,itemnetamount,uniquebillno,MAX(frequencycount)maxf,MIN(frequencycount)minf FROM sku_report_loyalty 
+WHERE ((modifiedtxndate BETWEEN '2024-10-01' AND '2024-10-31')OR
+(modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30')OR
+(modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31'))
+GROUP BY 1,2)a
+GROUP BY 1;
+
+##Enrolled Customer
+SELECT
+	CASE 
+		WHEN modifiedenrolledon BETWEEN '2024-10-01' AND '2024-10-31' THEN 'Oct-24'
+		WHEN modifiedenrolledon BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+		WHEN modifiedenrolledon BETWEEN '2025-10-01' AND '2025-10-31' THEN 'Oct-25'
+		END AS `Period`,
+COUNT(DISTINCT mobile) AS enrolled_Cust
+FROM member_report
+WHERE ((modifiedenrolledon BETWEEN '2024-10-01' AND '2024-10-31')OR
+(modifiedenrolledon BETWEEN '2025-09-01' AND '2025-09-30')OR
+(modifiedenrolledon BETWEEN '2025-10-01' AND '2025-10-31'))
+GROUP BY 1;
+ 
+
+##Non Loyalty
+SELECT
+	CASE 
+		WHEN modifiedtxndate BETWEEN '2024-10-01' AND '2024-10-31' THEN 'Oct-24'
+		WHEN modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+		WHEN modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31' THEN 'Oct-25'
+		END AS `Period`,
+SUM(itemnetamount) AS Nonloyalty_sale,
+COUNT(DISTINCT uniquebillno) AS nonloyalty_Bills
+FROM sku_report_nonloyalty
+WHERE ((modifiedtxndate BETWEEN '2024-10-01' AND '2024-10-31')OR
+(modifiedtxndate BETWEEN '2025-09-01' AND '2025-09-30')OR
+(modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31'))
+GROUP BY 1;
+
+
+
+##Points Value
+SELECT 
+	CASE 
+		WHEN txndate BETWEEN '2024-10-01' AND '2024-10-31' THEN 'Oct-24'
+		WHEN txndate BETWEEN '2025-09-01' AND '2025-09-30' THEN 'Sep-25'
+		WHEN txndate BETWEEN '2025-10-01' AND '2025-10-31' THEN 'Oct-25'
+		END AS `Period`,
+SUM(pointscollected) AS Point_issued,
+SUM(CASE WHEN pointsspent>0 THEN pointsspent END) AS Point_redeemed,
+COUNT(DISTINCT CASE WHEN pointsspent>0 THEN mobile END) AS Redeemers,
+SUM(CASE WHEN pointsspent>0 THEN amount END) AS Redeemers_Sales,
+SUM(CASE WHEN pointsspent>0 THEN amount END)/COUNT(DISTINCT CASE WHEN pointsspent>0 THEN uniquebillno END) AS Redeemers_ATV
+FROM txn_report_accrual_redemption
+WHERE ((txndate BETWEEN '2024-10-01' AND '2024-10-31')OR
+(txndate BETWEEN '2025-09-01' AND '2025-09-30')OR
+(txndate BETWEEN '2025-10-01' AND '2025-10-31'))
+GROUP BY 1;
+
+
+
+###################### Region Wise KPI #############
+
+
+SELECT Region,
+SUM(itemnetamount) AS Loyalty_Sales,COUNT(DISTINCT uniquebillno) AS Bills,
+COUNT(DISTINCT txnmappedmobile) AS Customer,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS ABV,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeater,
+COUNT(DISTINCT CASE WHEN dayssincelastvisit <=545 THEN txnmappedmobile END) AS Active_Base,
+COUNT(DISTINCT CASE WHEN dayssincelastvisit >545 AND dayssincelastvisit<=730 THEN txnmappedmobile END) AS Decling_Base,
+COUNT(DISTINCT CASE WHEN dayssincelastvisit >730 THEN txnmappedmobile END) AS Win_Back
+FROM sku_report_loyalty a
+JOIN store_master b
+ON a.modifiedstorecode=b.storecode
+WHERE modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31'
+GROUP BY 1;
+
+##New Enroll
+SELECT Region,COUNT(DISTINCT mobile) New_enroll FROM member_report a
+JOIN store_master b
+ON a.enrolledstorecode=b.storecode
+WHERE modifiedenrolledon BETWEEN '2025-10-01' AND '2025-10-31'
+GROUP BY 1;
+
+##New enroll & Txn
+SELECT Region,COUNT(DISTINCT txnmappedmobile) AS NewEnroll_Txn FROM sku_report_loyalty a
+JOIN store_master b
+ON a.modifiedstorecode=b.storecode
+WHERE modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31'
+AND txnmappedmobile IN (SELECT mobile FROM member_report
+WHERE modifiedenrolledon BETWEEN '2025-10-01' AND '2025-10-31')
+GROUP BY 1;
+
+
+-- select Region,sum(itemnetamount) as non_Sale from sku_report_nonloyalty a
+-- JOIN store_master b
+-- ON a.modifiedstorecode=b.storecode
+-- WHERE modifiedtxndate BETWEEN '2025-10-01' AND '2025-10-31'
+-- group by 1;
+
+
+###########################Bill Banding
+
+
+
+WITH bill_wise_data AS(SELECT txnmappedmobile,uniquebillno,frequencycount,SUM(itemnetamount)bill_value
+                             FROM sku_report_loyalty WHERE modifiedtxndate >= '2025-10-01' AND modifiedtxndate <= '2025-10-31'
+                             GROUP BY 1,2,3)
+                               
+     SELECT CASE WHEN bill_value >0 AND bill_value <=2500 THEN '0-2500'
+                 WHEN bill_value >2501 AND bill_value <=5000 THEN '2501-5000'
+                 WHEN bill_value >5001 AND bill_value <=7500 THEN '5001-7501'
+                 WHEN bill_value >7501 AND bill_value <=10000 THEN '7501-10000'
+                 WHEN bill_value >10001 AND bill_value <=12500 THEN '10000-12500'
+                 WHEN bill_value >12500 THEN '12500+'
+                 END AS Bill_Band,
+                 COUNT(DISTINCT txnmappedmobile)Customers,
+                 SUM(bill_value)Mapped_Sales,
+                 COUNT(DISTINCT uniquebillno)Mapped_Transactions,
+                 SUM(CASE WHEN frequencycount>1 THEN bill_value END)'Repeat Sales',
+                 COUNT(DISTINCT CASE WHEN frequencycount>1 THEN uniquebillno END)'Repeat Transactions'
+                FROM bill_wise_data GROUP BY 1;
+
+####################Customer Overview
+
+
+WITH overview AS(
+SELECT txnmappedmobile,DATEDIFF('2025-10-31',MAX(modifiedtxndate)) AS Recency,
+SUM(itemnetamount) AS Sales,COUNT(DISTINCT uniquebillno) AS Bills
+FROM sku_report_loyalty
+WHERE modifiedtxndate<='2025-10-31'
+-- and insertiondate<=curdate()
+GROUP BY 1
+)
+SELECT 
+	CASE 
+		WHEN recency<=545 THEN 'Active'
+		WHEN recency>545 AND recency<=730 THEN 'Dormant'
+		WHEN recency>730 THEN 'Lapse'
+		END AS 'Tag',
+COUNT(DISTINCT txnmappedmobile) Customer,SUM(Sales) Sales,SUM(Bills) Bills,
+SUM(sales)/SUM(bills) AS ABV
+FROM overview
+-- where modifiedtxndate <='2025-10-31'
+GROUP BY 1; 
+
+
+WITH Txn AS(
+SELECT mobile,DATEDIFF('2025-10-31',MAX(txndate)) AS Recency,
+SUM(pointscollected) AS PointAccrual,SUM(pointsspent) AS PointsRedeemed,
+SUM(CASE WHEN pointsspent>0 THEN amount END) AS redemption_sales
+FROM txn_report_accrual_redemption
+WHERE txndate<='2025-10-31'
+GROUP BY 1
+)
+SELECT 
+	CASE 
+		WHEN recency<=545 THEN 'Active'
+		WHEN recency>545 AND recency<=730 THEN 'Dormant'
+		WHEN recency>730 THEN 'Lapse'
+		END AS 'Tag',
+SUM(PointAccrual) PointAccrual,SUM(PointsRedeemed) PointsRedeemed,SUM(redemption_sales) redemption_sales,
+AVG(recency) AS Avg_recency
+FROM txn
+GROUP BY 1;
+
+
+##################Top 10 Store
+
+SELECT modifiedstorecode,modifiedstore,COUNT(DISTINCT txnmappedmobile) AS Txn_Customer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeaters,
+SUM(itemnetamount) AS Total_sales,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)AS Repeaters_Sales,
+COUNT(DISTINCT uniquebillno) AS Total_Bills,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS ABV
+FROM sku_report_loyalty
+WHERE modifiedtxndate>='2025-10-01' AND modifiedtxndate>='2025-10-31' 
+GROUP BY 1
+ORDER BY Total_sales DESC
+LIMIT 10;
+
+SELECT storecode,COUNT(DISTINCT CASE WHEN pointsspent>0 THEN mobile END) AS Redeemers
+FROM txn_report_accrual_redemption
+WHERE txndate>='2025-10-01' AND txndate>='2025-10-31'
+AND storecode IN ('A6048','FSL7214','A6041','A7053','A6051','FAL8668','A7026','A6045','A6044','A7036')
+GROUP BY 1;
+
+##Previous Quarter 
+SELECT modifiedstorecode,SUM(itemnetamount) sales FROM sku_report_loyalty
+WHERE modifiedtxndate BETWEEN '2025-07-01' AND '2025-09-30'
+AND modifiedstorecode IN ('A6048','FSL7214','A6041','A7053','A6051','FAL8668','A7026','A6045','A6044','A7036')
+GROUP BY 1;
+
+##################Bottom 10 Store
+
+SELECT modifiedstorecode,modifiedstore,COUNT(DISTINCT txnmappedmobile) AS Txn_Customer,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeaters,
+SUM(itemnetamount) AS Total_sales,
+SUM(CASE WHEN frequencycount>1 THEN itemnetamount END)AS Repeaters_Sales,
+COUNT(DISTINCT uniquebillno) AS Total_Bills,
+SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS ABV
+FROM sku_report_loyalty
+WHERE modifiedtxndate>='2025-10-01' AND modifiedtxndate>='2025-10-31' 
+GROUP BY 1
+ORDER BY Total_sales
+LIMIT 10;
+
+SELECT storecode,COUNT(DISTINCT CASE WHEN pointsspent>0 THEN mobile END) AS Redeemers
+FROM txn_report_accrual_redemption
+WHERE txndate>='2025-10-01' AND txndate>='2025-10-31'
+AND storecode IN ('A6001','A6049','FGB8960','FSU7121','FSU7117','FSH8746','FSU7136','FAD8952','FAD8990','FDS7204')
+GROUP BY 1;
+
+-- SELECT modifiedstorecode,SUM(itemnetamount) sales FROM sku_report_loyalty
+-- WHERE modifiedtxndate BETWEEN '2025-07-01' AND '2025-09-30'
+-- AND modifiedstorecode IN ('A6048','FSL7214','A6041','A7053','A6051','FAL8668','A7026','A6045','A6044','A7036')
+-- GROUP BY 1;
+
+###################Tier Level 
+
+
+SELECT Tier,COUNT(DISTINCT txnmappedmobile) AS Total_cust,
+COUNT(DISTINCT CASE WHEN frequencycount>1 THEN txnmappedmobile END) AS Repeater,
+COUNT(DISTINCT txnmappedmobile,modifiedtxndate) AS Visit,
+COUNT(DISTINCT txnmappedmobile, modifiedtxndate)/COUNT(DISTINCT txnmappedmobile) AS Avg_visit,
+SUM(itemnetamount) AS Sales,SUM(CASE WHEN frequencycount>1 THEN itemnetamount END) AS Repeater_Sales,
+COUNT(DISTINCT uniquebillno) AS Bills,SUM(itemnetamount)/COUNT(DISTINCT uniquebillno) AS ABV,
+SUM(itemnetamount)/COUNT(DISTINCT txnmappedmobile) AS AMV
+FROM sku_report_loyalty a
+JOIN member_report b
+ON a.txnmappedmobile=b.mobile
+WHERE modifiedtxndate<='2025-10-31'
+GROUP BY 1;
+
+##Points Data
+SELECT Tier,COUNT(DISTINCT CASE WHEN a.pointsspent>0 THEN a.mobile END) AS Redeemers,
+SUM(a.pointscollected) AS PointAccrual,SUM(a.pointsspent) AS PointsRedeemed
+FROM txn_report_accrual_redemption a
+JOIN member_report b
+ON a.mobile=b.mobile
+WHERE txndate<='2025-10-31'
+GROUP BY 1;
